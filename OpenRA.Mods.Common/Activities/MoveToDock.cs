@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OpenRA.Activities;
 using OpenRA.Mods.Common.Traits;
+using OpenRA.Primitives;
 using OpenRA.Traits;
 
 namespace OpenRA.Mods.Common.Activities
@@ -23,13 +24,15 @@ namespace OpenRA.Mods.Common.Activities
 		Actor linkHostActor;
 		ILinkHost linkHost;
 		readonly INotifyLinkClientMoving[] notifylinkClientMoving;
+		readonly Color? linkLineColor;
 		readonly MoveCooldownHelper moveCooldownHelper;
 
-		public MoveToDock(Actor self, Actor linkHostActor = null, ILinkHost linkHost = null)
+		public MoveToDock(Actor self, LinkClientManager linkClient, Actor linkHostActor = null, ILinkHost linkHost = null, Color? linkLineColor = null)
 		{
-			linkClient = self.Trait<LinkClientManager>();
+			this.linkClient = linkClient;
 			this.linkHostActor = linkHostActor;
 			this.linkHost = linkHost;
+			this.linkLineColor = linkLineColor;
 			notifylinkClientMoving = self.TraitsImplementing<INotifyLinkClientMoving>().ToArray();
 			moveCooldownHelper = new MoveCooldownHelper(self.World, self.Trait<IMove>() as Mobile) { RetryIfDestinationBlocked = true };
 		}
@@ -98,12 +101,15 @@ namespace OpenRA.Mods.Common.Activities
 
 		public override IEnumerable<TargetLineNode> TargetLineNodes(Actor self)
 		{
+			if (!linkLineColor.HasValue)
+				yield break;
+
 			if (linkHostActor != null)
-				yield return new TargetLineNode(Target.FromActor(linkHostActor), linkClient.LinkLineColor);
+				yield return new TargetLineNode(Target.FromActor(linkHostActor), linkLineColor.Value);
 			else
 			{
 				if (linkClient.ReservedHostActor != null)
-					yield return new TargetLineNode(Target.FromActor(linkClient.ReservedHostActor), linkClient.LinkLineColor);
+					yield return new TargetLineNode(Target.FromActor(linkClient.ReservedHostActor), linkLineColor.Value);
 			}
 		}
 	}
