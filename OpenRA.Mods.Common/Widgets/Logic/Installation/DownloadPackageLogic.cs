@@ -12,6 +12,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,9 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 
 		[TranslationReference]
 		const string UnknownHost = "label-unknown-host";
+
+		[TranslationReference]
+		const string DownloadFailed = "label-download-failed";
 
 		[TranslationReference("host", "received", "suffix")]
 		const string DownloadingFrom = "label-downloading-from";
@@ -174,6 +178,12 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 						var client = HttpClientFactory.Create();
 
 						var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
+
+						if (response.StatusCode != HttpStatusCode.OK)
+						{
+							OnError(TranslationProvider.GetString(DownloadFailed));
+							return;
+						}
 
 						using (var fileStream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, 8192, true))
 						{
