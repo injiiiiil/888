@@ -70,6 +70,19 @@ namespace OpenRA.Network
 							TextNotificationsManager.AddPlayerJoinedLine(localizedMessage.Key, localizedMessage.Arguments);
 						else if (localizedMessage.Key == Left)
 							TextNotificationsManager.AddPlayerLeftLine(localizedMessage.Key, localizedMessage.Arguments);
+						else if (localizedMessage.Key.Contains("briefing"))
+						{
+							var map = orderManager.LobbyInfo.GlobalSettings.Map;
+							if (map == null && localizedMessage.Arguments.ContainsKey("map"))
+								map = (string)localizedMessage.Arguments.GetValueOrDefault("map");
+
+							if (map != null)
+							{
+								var mapPreview = Game.ModData.MapCache[map];
+								if (mapPreview.Status == MapStatus.Available)
+									TextNotificationsManager.AddSystemLine(mapPreview.GetLocalisedString(localizedMessage.Key));
+							}
+						}
 						else
 							TextNotificationsManager.AddSystemLine(localizedMessage.Key, localizedMessage.Arguments);
 					}

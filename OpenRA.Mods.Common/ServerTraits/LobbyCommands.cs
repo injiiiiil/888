@@ -664,7 +664,7 @@ namespace OpenRA.Mods.Common.Server
 
 						var briefing = MissionBriefingOrDefault(server);
 						if (briefing != null)
-							server.SendMessage(briefing);
+							server.SendLocalizedMessage(briefing);
 					}
 				}
 
@@ -1442,7 +1442,7 @@ namespace OpenRA.Mods.Common.Server
 		{
 			var missionData = server.Map.WorldActorInfo.TraitInfoOrDefault<MissionDataInfo>();
 			if (missionData != null && !string.IsNullOrEmpty(missionData.Briefing))
-				return missionData.Briefing.Replace("\\n", "\n");
+				return missionData.Briefing;
 
 			return null;
 		}
@@ -1465,7 +1465,7 @@ namespace OpenRA.Mods.Common.Server
 				// then we need a larger hack to hook the map change event.
 				var briefing = MissionBriefingOrDefault(server);
 				if (briefing != null)
-					server.SendOrderTo(conn, "Message", briefing);
+					server.SendLocalizedMessageTo(conn, briefing, Translation.Arguments("map", server.Map.Uid));
 			}
 		}
 
