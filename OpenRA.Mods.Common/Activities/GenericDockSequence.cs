@@ -41,7 +41,8 @@ namespace OpenRA.Mods.Common.Activities
 
 		bool dockInitiated = false;
 
-		public GenericDockSequence(Actor self, LinkClientManager client, Actor hostActor, ILinkHost host)
+		public GenericDockSequence(Actor self, LinkClientManager client, Actor hostActor, ILinkHost host,
+			int linkWait, bool isDragRequired, WVec dragOffset, int dragLength)
 		{
 			dockingState = DockingState.Drag;
 
@@ -54,17 +55,12 @@ namespace OpenRA.Mods.Common.Activities
 			DockHostSpriteOverlay = hostActor.TraitOrDefault<WithDockingOverlay>();
 			notifyDockHosts = hostActor.TraitsImplementing<INotifyLinkHost>().ToArray();
 
-			if (host is ILinkHostDrag sequence)
-			{
-				IsDragRequired = sequence.IsDragRequired;
-				DragLength = sequence.DragLength;
-				StartDrag = self.CenterPosition;
-				EndDrag = hostActor.CenterPosition + sequence.DragOffset;
-			}
-			else
-				IsDragRequired = false;
+			IsDragRequired = isDragRequired;
+			DragLength = dragLength;
+			StartDrag = self.CenterPosition;
+			EndDrag = hostActor.CenterPosition + dragOffset;
 
-			QueueChild(new Wait(host.LinkWait));
+			QueueChild(new Wait(linkWait));
 		}
 
 		public override bool Tick(Actor self)

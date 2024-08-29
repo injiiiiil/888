@@ -49,7 +49,7 @@ namespace OpenRA.Mods.Common.Traits
 	}
 
 	public class DockHost : ConditionalTrait<DockHostInfo>,
-		ILinkHost, ILinkHostDrag, ITick, INotifySold, INotifyCapture, INotifyOwnerChanged, ISync, INotifyKilled, INotifyActorDisposing
+		ILinkHost, ITick, INotifySold, INotifyCapture, INotifyOwnerChanged, ISync, INotifyKilled, INotifyActorDisposing
 	{
 		readonly Actor self;
 
@@ -60,12 +60,6 @@ namespace OpenRA.Mods.Common.Traits
 		protected readonly List<LinkClientManager> ReservedLinkClients = new();
 
 		public WPos LinkPosition => self.CenterPosition + Info.DockOffset;
-		public int LinkWait => Info.DockWait;
-		public WAngle LinkFacing => Info.DockAngle;
-
-		bool ILinkHostDrag.IsDragRequired => Info.IsDragRequired;
-		WVec ILinkHostDrag.DragOffset => Info.DragOffset;
-		int ILinkHostDrag.DragLength => Info.DragLength;
 
 		[Sync]
 		bool preventLink = false;
@@ -141,10 +135,10 @@ namespace OpenRA.Mods.Common.Traits
 			// Make sure the actor is at dock, at correct facing, and aircraft are landed.
 			// Mobile cannot freely move in WPos, so when we calculate close enough we convert to CPos.
 			if ((move is Mobile ? clientActor.Location != clientActor.World.Map.CellContaining(LinkPosition) : clientActor.CenterPosition != LinkPosition)
-				|| move is not IFacing facing || facing.Facing != LinkFacing)
+				|| move is not IFacing facing || facing.Facing != Info.DockAngle)
 			{
 				moveCooldownHelper.NotifyMoveQueued();
-				moveToLinkHostActivity.QueueChild(move.MoveOntoTarget(clientActor, Target.FromActor(self), LinkPosition - self.CenterPosition, LinkFacing));
+				moveToLinkHostActivity.QueueChild(move.MoveOntoTarget(clientActor, Target.FromActor(self), LinkPosition - self.CenterPosition, Info.DockAngle));
 				return true;
 			}
 
@@ -153,7 +147,15 @@ namespace OpenRA.Mods.Common.Traits
 
 		public virtual void QueueLinkActivity(Activity moveToLinkHostActivity, Actor self, Actor clientActor, LinkClientManager client)
 		{
-			moveToLinkHostActivity.QueueChild(new GenericDockSequence(clientActor, client, self, this));
+			moveToLinkHostActivity.QueueChild(new GenericDockSequence(
+				clientActor,
+				client,
+				self,
+				this,
+				Info.DockWait,
+				Info.IsDragRequired,
+				Info.DragOffset,
+				Info.DragLength));
 		}
 
 		protected override void TraitDisabled(Actor self) { UnreserveAll(); }

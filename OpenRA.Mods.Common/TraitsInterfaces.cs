@@ -246,8 +246,6 @@ namespace OpenRA.Mods.Common.Traits
 		int ReservationCount { get; }
 		bool CanBeReserved { get; }
 		WPos LinkPosition { get; }
-		int LinkWait { get; }
-		WAngle LinkFacing { get; }
 
 		/// <summary>Can this <paramref name="client"/> link at this <see cref="ILinkHost"/>.</summary>
 		/// <remarks>
@@ -267,13 +265,6 @@ namespace OpenRA.Mods.Common.Traits
 
 		/// <summary>Should be called when in range of <see cref="ILinkHost"/>.</summary>
 		void QueueLinkActivity(Activity moveToHostActivity, Actor self, Actor clientActor, LinkClientManager client);
-	}
-
-	public interface ILinkHostDrag
-	{
-		bool IsDragRequired { get; }
-		WVec DragOffset { get; }
-		int DragLength { get; }
 	}
 
 	public interface ILinkClientManagerInfo : ITraitInfoInterface { }
