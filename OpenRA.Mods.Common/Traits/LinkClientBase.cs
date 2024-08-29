@@ -30,20 +30,14 @@ namespace OpenRA.Mods.Common.Traits
 			LinkClientManager = self.TraitOrDefault<LinkClientManager>();
 		}
 
-		protected virtual bool CanLink()
-		{
-			return true;
-		}
-
 		public virtual bool CanLink(BitSet<LinkType> type, bool forceEnter = false)
 		{
-			return !IsTraitDisabled && LinkType.Overlaps(type) && (forceEnter || CanLink());
+			return !IsTraitDisabled && LinkType.Overlaps(type);
 		}
 
 		public virtual bool CanLinkTo(Actor hostActor, ILinkHost host, bool forceEnter = false, bool ignoreOccupancy = false)
 		{
-			return (forceEnter || self.Owner.IsAlliedWith(hostActor.Owner))
-				&& CanLink(host.GetLinkType, forceEnter)
+			return CanLink(host.GetLinkType, forceEnter)
 				&& host.CanLink(self, this, ignoreOccupancy);
 		}
 

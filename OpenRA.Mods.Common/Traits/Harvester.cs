@@ -94,6 +94,7 @@ namespace OpenRA.Mods.Common.Traits
 		readonly IResourceLayer resourceLayer;
 		readonly ResourceClaimLayer claimLayer;
 		readonly IStoresResources[] storesResources;
+		readonly Actor self;
 		int conditionToken = Actor.InvalidConditionToken;
 
 		public override BitSet<LinkType> LinkType => Info.Type;
@@ -107,6 +108,7 @@ namespace OpenRA.Mods.Common.Traits
 			storesResources = self.TraitsImplementing<IStoresResources>().Where(sr => info.Resources.Any(r => sr.HasType(r))).ToArray();
 			resourceLayer = self.World.WorldActor.Trait<IResourceLayer>();
 			claimLayer = self.World.WorldActor.Trait<ResourceClaimLayer>();
+			this.self = self;
 		}
 
 		protected override void Created(Actor self)
@@ -124,9 +126,15 @@ namespace OpenRA.Mods.Common.Traits
 		public bool IsEmpty => storesResources.All(sr => sr.ContentsSum == 0);
 		public int Fullness => storesResources.Sum(sr => sr.ContentsSum * 100 / sr.Capacity) / storesResources.Length;
 
-		protected override bool CanLink()
+		public override bool CanLink(BitSet<LinkType> type, bool forceEnter = false)
 		{
-			return !IsEmpty;
+			return base.CanLink(type, forceEnter) && (forceEnter || !IsEmpty);
+		}
+
+		public override bool CanLinkTo(Actor hostActor, ILinkHost host, bool forceEnter = false, bool ignoreOccupancy = false)
+		{
+			return base.CanLinkTo(hostActor, host, forceEnter, ignoreOccupancy)
+				&& (self.Owner == hostActor.Owner || (ignoreOccupancy && self.Owner.IsAlliedWith(hostActor.Owner)));
 		}
 
 		void UpdateCondition(Actor self)

@@ -330,7 +330,7 @@ namespace OpenRA.Mods.Common.Traits
 			if (requireForceMove() && !forceEnter)
 				return false;
 
-			if (!self.Owner.IsAlliedWith(target.Actor.Owner) || !canTarget(target.Actor, forceEnter))
+			if (!canTarget(target.Actor, forceEnter))
 				return false;
 
 			cursor = useEnterCursor(target.Actor, forceEnter) ? enterCursor : enterBlockedCursor;
