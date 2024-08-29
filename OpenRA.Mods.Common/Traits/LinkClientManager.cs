@@ -349,7 +349,9 @@ namespace OpenRA.Mods.Common.Traits
 			if (mobile != null)
 			{
 				// Overlapping hosts can become hidden.
-				var lookup = linkHosts.ToDictionary(host => clientActor.World.Map.CellContaining(host.Trait.LinkPosition));
+				var lookup = linkHosts
+					.GroupBy(host => clientActor.World.Map.CellContaining(host.Trait.LinkPosition))
+					.ToDictionary(group => group.Key, group => group.First());
 
 				// Start a search from each host position:
 				var path = mobile.PathFinder.FindPathToTargetCell(
