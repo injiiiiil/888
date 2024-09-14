@@ -26,15 +26,38 @@ namespace OpenRA.Mods.Common.Activities
 		readonly INotifyLinkClientMoving[] notifyLinkClientMoving;
 		readonly Color? linkLineColor;
 		readonly MoveCooldownHelper moveCooldownHelper;
+		readonly bool forceEnter;
+		readonly bool ignoreOccupancy;
 
-		public MoveToDock(Actor self, LinkClientManager linkClient, Actor linkHostActor = null, ILinkHost linkHost = null, Color? linkLineColor = null)
+		public MoveToDock(Actor self, LinkClientManager linkClient,
+			Actor linkHostActor = null, ILinkHost linkHost = null,
+			bool forceEnter = false, bool ignoreOccupancy = false,
+			Color? linkLineColor = null)
 		{
 			this.linkClient = linkClient;
 			this.linkHostActor = linkHostActor;
 			this.linkHost = linkHost;
 			this.linkLineColor = linkLineColor;
+			this.forceEnter = forceEnter;
+			this.ignoreOccupancy = ignoreOccupancy;
 			notifyLinkClientMoving = self.TraitsImplementing<INotifyLinkClientMoving>().ToArray();
 			moveCooldownHelper = new MoveCooldownHelper(self.World, self.Trait<IMove>() as Mobile) { RetryIfDestinationBlocked = true };
+		}
+
+		protected override void OnFirstRun(Actor self)
+		{
+			if (IsCanceling || linkClient.IsTraitDisabled)
+				return;
+
+			// We were ordered to dock to an actor but host was unspecified.
+			if (linkHostActor != null && linkHost == null)
+			{
+				var link = linkClient.AvailableLinkHosts(linkHostActor, default, forceEnter, ignoreOccupancy)
+					.ClosestLinkHost(self, linkClient);
+
+				if (link.HasValue)
+					linkHost = link.Value.Trait;
+			}
 		}
 
 		public override bool Tick(Actor self)

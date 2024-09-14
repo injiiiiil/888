@@ -178,16 +178,15 @@ namespace OpenRA.Mods.Common.Traits
 				if (target.Type != TargetType.Actor)
 					return;
 
-				if (IsTraitDisabled)
-					return;
+				self.QueueActivity(order.Queued, new MoveToDock(
+					self,
+					this,
+					target.Actor,
+					null,
+					order.OrderString == "ForceLink",
+					true,
+					Info.LinkLineColor));
 
-				var link = AvailableLinkHosts(target.Actor, default, order.OrderString == "ForceLink", true)
-					.ClosestLinkHost(self, this);
-
-				if (!link.HasValue)
-					return;
-
-				self.QueueActivity(order.Queued, new MoveToDock(self, this, link.Value.Actor, link.Value.Trait, LinkLineColor));
 				self.ShowTargetLines();
 			}
 		}
