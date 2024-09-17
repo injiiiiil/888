@@ -10,6 +10,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace OpenRA
 {
@@ -59,6 +60,33 @@ namespace OpenRA
 		Alt = 2,
 		Ctrl = 4,
 		Meta = 8,
+	}
+
+	public static class ModifiersExts
+	{
+		[TranslationReference]
+		const string Cmd = "keycode-modifier.cmd";
+
+		[TranslationReference(Traits.LintDictionaryReference.Values)]
+		static readonly Dictionary<Modifiers, string> ModifierTranslationKeys = new()
+		{
+			{ Modifiers.None, "keycode-modifier.none" },
+			{ Modifiers.Shift, "keycode-modifier.shift" },
+			{ Modifiers.Alt, "keycode-modifier.alt" },
+			{ Modifiers.Ctrl, "keycode-modifier.ctrl" },
+			{ Modifiers.Meta, "keycode-modifier.meta" },
+		};
+
+		public static string DisplayString(Modifiers m)
+		{
+			if (m == Modifiers.Meta && Platform.CurrentPlatform == PlatformType.OSX)
+				return TranslationProvider.GetString(Cmd);
+
+			if (!ModifierTranslationKeys.TryGetValue(m, out var translationKey))
+				return m.ToString();
+
+			return TranslationProvider.GetString(translationKey);
+		}
 	}
 
 	public enum KeyInputEvent { Down, Up }

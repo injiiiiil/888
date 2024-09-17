@@ -17,9 +17,15 @@ namespace OpenRA
 	{
 		public readonly string Name;
 		public readonly Hotkey Default = Hotkey.Invalid;
+
+		[TranslationReference]
 		public readonly string Description = "";
+
 		public readonly HashSet<string> Types = new();
+
+		[TranslationReference]
 		public readonly HashSet<string> Contexts = new();
+
 		public readonly bool Readonly = false;
 		public bool HasDuplicates { get; internal set; }
 

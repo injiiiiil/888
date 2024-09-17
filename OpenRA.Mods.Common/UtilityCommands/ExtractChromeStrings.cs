@@ -41,7 +41,7 @@ namespace OpenRA.Mods.Common.UtilityCommands
 				.Where(t => t.Name.EndsWith("Widget", StringComparison.InvariantCulture) && t.IsSubclassOf(typeof(Widget)))
 				.ToDictionary(
 					t => t.Name[..^6],
-					t => t.GetFields().Where(f => f.HasAttribute<TranslationReferenceAttribute>()).Select(f => f.Name).ToArray())
+					t => Utility.GetFields(t).Where(Utility.HasAttribute<TranslationReferenceAttribute>).Select(f => f.Name).ToArray())
 				.Where(t => t.Value.Length > 0)
 				.ToDictionary(t => t.Key, t => t.Value);
 
@@ -319,9 +319,9 @@ namespace OpenRA.Mods.Common.UtilityCommands
 				.Where(t => t.Name.EndsWith("Widget", StringComparison.InvariantCulture) && t.IsSubclassOf(typeof(Widget)))
 				.ToDictionary(
 					t => t.Name[..^6],
-					t => t
-						.GetFields()
-						.Where(f => f.Name != "Id" && f.IsPublic && f.FieldType == typeof(string) && !f.HasAttribute<TranslationReferenceAttribute>())
+					t =>
+						Utility.GetFields(t)
+						.Where(f => f.Name != "Id" && f.IsPublic && f.FieldType == typeof(string) && !Utility.HasAttribute<TranslationReferenceAttribute>(f))
 						.Distinct()
 						.Select(f => f.Name)
 						.ToList()))
