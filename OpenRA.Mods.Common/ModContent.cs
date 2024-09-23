@@ -21,6 +21,7 @@ namespace OpenRA
 	{
 		public class ModPackage
 		{
+			[TranslationReference]
 			public readonly string Title;
 			public readonly string Identifier;
 			public readonly string[] TestFiles = Array.Empty<string>();
@@ -100,10 +101,13 @@ namespace OpenRA
 			}
 		}
 
+		[TranslationReference]
 		public readonly string InstallPromptMessage;
 		public readonly string QuickDownload;
+		[TranslationReference]
 		public readonly string HeaderMessage;
 		public readonly string ContentInstallerMod = "modcontent";
+		public readonly string Translation;
 
 		[FieldLoader.LoadUsing(nameof(LoadPackages))]
 		public readonly Dictionary<string, ModPackage> Packages = new();

@@ -45,12 +45,17 @@ namespace OpenRA
 
 	public class ModMetadata
 	{
+		[TranslationReference]
 		public string Title;
 		public string Version;
 		public string Website;
 		public string WebIcon32;
+		[TranslationReference]
 		public string WindowTitle;
 		public bool Hidden;
+
+		public string TitleTranslated => TranslationProvider.GetString(Title);
+		public string WindowTitleTranslated => WindowTitle != null ? TranslationProvider.GetString(WindowTitle) : null;
 	}
 
 	/// <summary>Describes what is to be loaded in order to run a mod.</summary>

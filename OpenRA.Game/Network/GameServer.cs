@@ -188,7 +188,7 @@ namespace OpenRA.Network
 				{
 					// Use internal mod data to populate the section header, but
 					// on-connect switching must use the external mod plumbing.
-					ModTitle = mod.Metadata.Title;
+					ModTitle = mod.Metadata.TitleTranslated;
 				}
 				else
 				{
@@ -222,7 +222,7 @@ namespace OpenRA.Network
 			Map = server.Map.Uid;
 			Mod = manifest.Id;
 			Version = manifest.Metadata.Version;
-			ModTitle = manifest.Metadata.Title;
+			ModTitle = manifest.Metadata.TitleTranslated;
 			ModWebsite = manifest.Metadata.Website;
 			ModIcon32 = manifest.Metadata.WebIcon32;
 			Protected = !string.IsNullOrEmpty(server.Settings.Password);

@@ -43,16 +43,17 @@ namespace OpenRA.Mods.Common.Lint
 
 			var mapTranslations = FieldLoader.GetValue<string[]>("value", map.TranslationDefinitions.Value);
 
-			foreach (var language in GetTranslationLanguages(modData))
+			var allModTranslations = modData.Manifest.Translations.Append(modData.Manifest.Get<ModContent>().Translation).ToArray();
+			foreach (var language in GetTranslationLanguages(allModTranslations))
 			{
 				// Check keys and variables are not missing across all language files.
 				// But for maps we don't warn on unused keys. They might be unused on *this* map,
 				// but the mod or another map may use them and we don't have sight of that.
 				CheckKeys(
-					modData.Manifest.Translations.Concat(mapTranslations), map.Open, usedKeys,
+					allModTranslations.Concat(mapTranslations), map.Open, usedKeys,
 					language, _ => false, emitError, emitWarning);
 
-				var modTranslation = new Translation(language, modData.Manifest.Translations, modData.DefaultFileSystem, _ => { });
+				var modTranslation = new Translation(language, allModTranslations, modData.DefaultFileSystem, _ => { });
 				var mapTranslation = new Translation(language, mapTranslations, map, error => emitError(error.Message));
 
 				foreach (var group in usedKeys.KeysWithContext)
@@ -78,15 +79,16 @@ namespace OpenRA.Mods.Common.Lint
 			foreach (var context in usedKeys.EmptyKeyContexts)
 				emitWarning($"Empty key in mod translation files required by {context}");
 
-			foreach (var language in GetTranslationLanguages(modData))
+			var allModTranslations = modData.Manifest.Translations.Append(modData.Manifest.Get<ModContent>().Translation).ToArray();
+			foreach (var language in GetTranslationLanguages(allModTranslations))
 			{
 				Console.WriteLine($"Testing translation: {language}");
-				var translation = new Translation(language, modData.Manifest.Translations, modData.DefaultFileSystem, error => emitError(error.Message));
+				var translation = new Translation(language, allModTranslations, modData.DefaultFileSystem, error => emitError(error.Message));
 				CheckModWidgets(modData, usedKeys, testedFields);
 
 				// With the fully populated keys, check keys and variables are not missing and not unused across all language files.
 				var keyWithAttrs = CheckKeys(
-					modData.Manifest.Translations, modData.DefaultFileSystem.Open, usedKeys,
+					allModTranslations, modData.DefaultFileSystem.Open, usedKeys,
 					language,
 					file =>
 						!modData.Manifest.AllowUnusedTranslationsInExternalPackages ||
@@ -114,9 +116,9 @@ namespace OpenRA.Mods.Common.Lint
 					$"`{field.ReflectedType.Name}.{field.Name}` - previous warnings may be incorrect");
 		}
 
-		static IEnumerable<string> GetTranslationLanguages(ModData modData)
+		static IEnumerable<string> GetTranslationLanguages(IEnumerable<string> translations)
 		{
-			return modData.Manifest.Translations
+			return translations
 				.Select(filename => TranslationFilenameRegex.Match(filename).Groups["language"].Value)
 				.Distinct()
 				.OrderBy(l => l);
@@ -248,51 +250,54 @@ namespace OpenRA.Mods.Common.Lint
 				.Where(t => t.IsSubclassOf(typeof(TraitInfo)) || t.IsSubclassOf(typeof(Warhead)))
 				.SelectMany(t => t.GetFields().Where(f => f.HasAttribute<TranslationReferenceAttribute>())));
 
-			// HACK: Need to hardcode the custom loader for GameSpeeds.
-			var gameSpeeds = modData.Manifest.Get<GameSpeeds>();
-			var gameSpeedNameField = typeof(GameSpeed).GetField(nameof(GameSpeed.Name));
-			var gameSpeedTranslationReference = Utility.GetCustomAttributes<TranslationReferenceAttribute>(gameSpeedNameField, true)[0];
-			testedFields.Add(gameSpeedNameField);
-			foreach (var speed in gameSpeeds.Speeds.Values)
-				usedKeys.Add(speed.Name, gameSpeedTranslationReference, $"`{nameof(GameSpeed)}.{nameof(GameSpeed.Name)}`");
+			// TODO: linter does not work with LoadUsing
+			GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+				usedKeys, testedFields, Utility.GetFields(typeof(GameSpeed)), modData.Manifest.Get<GameSpeeds>().Speeds.Values);
 
 			// TODO: linter does not work with LoadUsing
-			foreach (var actorInfo in modData.DefaultRules.Actors)
+			GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+				usedKeys, testedFields,
+				Utility.GetFields(typeof(ResourceRendererInfo.ResourceTypeInfo)),
+				modData.DefaultRules.Actors
+					.SelectMany(actorInfo => actorInfo.Value.TraitInfos<ResourceRendererInfo>())
+					.SelectMany(info => info.ResourceTypes.Values));
+
+			const BindingFlags Binding = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+			var constFields = modData.ObjectCreator.GetTypes().SelectMany(modType => modType.GetFields(Binding)).Where(f => f.IsLiteral);
+			GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+				usedKeys, testedFields, constFields, new[] { (object)null });
+
+			GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+				usedKeys, testedFields, Utility.GetFields(typeof(ModMetadata)), new[] { modData.Manifest.Metadata });
+
+			var modContent = modData.Manifest.Get<ModContent>();
+			GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+				usedKeys, testedFields, Utility.GetFields(typeof(ModContent)), new[] { modContent });
+			GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+				usedKeys, testedFields, Utility.GetFields(typeof(ModContent.ModPackage)), modContent.Packages.Values);
+
+			return (usedKeys, testedFields);
+		}
+
+		static void GetUsedTranslationKeysFromFieldsWithTranslationReferenceAttribute(
+			TranslationKeys usedKeys, List<FieldInfo> testedFields,
+			IEnumerable<FieldInfo> newFields, IEnumerable<object> objects)
+		{
+			var fieldsWithAttribute =
+				newFields
+					.Select(f => (Field: f, TranslationReference: Utility.GetCustomAttributes<TranslationReferenceAttribute>(f, true).SingleOrDefault()))
+					.Where(x => x.TranslationReference != null)
+					.ToArray();
+			testedFields.AddRange(fieldsWithAttribute.Select(x => x.Field));
+			foreach (var obj in objects)
 			{
-				foreach (var info in actorInfo.Value.TraitInfos<ResourceRendererInfo>())
+				foreach (var (field, translationReference) in fieldsWithAttribute)
 				{
-					var resourceTypeNameField = typeof(ResourceRendererInfo.ResourceTypeInfo).GetField(nameof(ResourceRendererInfo.ResourceTypeInfo.Name));
-					var resourceTypeTranslationReference = Utility.GetCustomAttributes<TranslationReferenceAttribute>(resourceTypeNameField, true)[0];
-					testedFields.Add(resourceTypeNameField);
-					foreach (var resourceTypes in info.ResourceTypes)
-						usedKeys.Add(
-							resourceTypes.Value.Name,
-							resourceTypeTranslationReference,
-							$"`{nameof(ResourceRendererInfo.ResourceTypeInfo)}.{nameof(ResourceRendererInfo.ResourceTypeInfo.Name)}`");
-				}
-			}
-
-			foreach (var modType in modData.ObjectCreator.GetTypes())
-			{
-				const BindingFlags Binding = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-				foreach (var field in modType.GetFields(Binding))
-				{
-					// Checking for constant string fields.
-					if (!field.IsLiteral)
-						continue;
-
-					var translationReference = Utility.GetCustomAttributes<TranslationReferenceAttribute>(field, true).SingleOrDefault();
-					if (translationReference == null)
-						continue;
-
-					testedFields.Add(field);
-					var keys = LintExts.GetFieldValues(null, field, translationReference.DictionaryReference);
+					var keys = LintExts.GetFieldValues(obj, field, translationReference.DictionaryReference);
 					foreach (var key in keys)
 						usedKeys.Add(key, translationReference, $"`{field.ReflectedType.Name}.{field.Name}`");
 				}
 			}
-
-			return (usedKeys, testedFields);
 		}
 
 		static void CheckModWidgets(ModData modData, TranslationKeys usedKeys, List<FieldInfo> testedFields)
