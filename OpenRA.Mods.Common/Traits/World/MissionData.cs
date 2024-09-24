@@ -17,6 +17,7 @@ namespace OpenRA.Mods.Common.Traits
 	[TraitLocation(SystemActors.World)]
 	public class MissionDataInfo : TraitInfo<MissionData>
 	{
+		[TranslationReference]
 		[Desc("Briefing text displayed in the mission browser.")]
 		public readonly string Briefing;
 
