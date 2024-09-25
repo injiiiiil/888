@@ -63,6 +63,13 @@ namespace OpenRA.Mods.Common.UtilityCommands
 			sb = sequences.SpriteCache.SheetBuilders[SheetType.BGRA];
 			foreach (var s in sb.AllSheets)
 				s.AsPng().Save($"{count++}.png");
+
+			var cursorProvider = new CursorProvider(modData);
+			using (var cursor = new CursorManager(cursorProvider, modData.Manifest.CursorSheetSize))
+			{
+				foreach (var c in cursor.SheetBuilder.AllSheets)
+					c.AsPng().Save($"{count++}.png");
+			}
 		}
 	}
 }
