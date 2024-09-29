@@ -61,15 +61,16 @@ namespace OpenRA
 		public readonly ModMetadata Metadata;
 		public readonly string[]
 			Rules, ServerTraits,
-			Sequences, ModelSequences, Cursors, Chrome, Assemblies, ChromeLayout,
+			Sequences, ModelSequences, Cursors, Chrome, ChromeLayout,
 			Weapons, Voices, Notifications, Music, Translations, TileSets,
 			ChromeMetrics, MapCompatibility, Missions, Hotkeys;
 
-		public readonly IReadOnlyDictionary<string, string> Packages;
 		public readonly IReadOnlyDictionary<string, string> MapFolders;
+		public readonly MiniYaml FileSystem;
 		public readonly MiniYaml LoadScreen;
 		public readonly string DefaultOrderGenerator;
 
+		public readonly string[] Assemblies = Array.Empty<string>();
 		public readonly string[] SoundFormats = Array.Empty<string>();
 		public readonly string[] SpriteFormats = Array.Empty<string>();
 		public readonly string[] PackageFormats = Array.Empty<string>();
@@ -80,7 +81,7 @@ namespace OpenRA
 
 		readonly string[] reservedModuleNames =
 		{
-			"Include", "Metadata", "Folders", "MapFolders", "Packages", "Rules",
+			"Include", "Metadata", "FileSystem", "MapFolders", "Rules",
 			"Sequences", "ModelSequences", "Cursors", "Chrome", "Assemblies", "ChromeLayout", "Weapons",
 			"Voices", "Notifications", "Music", "Translations", "TileSets", "ChromeMetrics", "Missions", "Hotkeys",
 			"ServerTraits", "LoadScreen", "DefaultOrderGenerator", "SupportsMapsFrom", "SoundFormats", "SpriteFormats", "VideoFormats",
@@ -122,15 +123,14 @@ namespace OpenRA
 			// TODO: Use fieldloader
 			MapFolders = YamlDictionary(yaml, "MapFolders");
 
-			if (yaml.TryGetValue("Packages", out var packages))
-				Packages = packages.ToDictionary(x => x.Value);
+			if (!yaml.TryGetValue("FileSystem", out FileSystem))
+				throw new InvalidDataException("`FileSystem` section is not defined.");
 
 			Rules = YamlList(yaml, "Rules");
 			Sequences = YamlList(yaml, "Sequences");
 			ModelSequences = YamlList(yaml, "ModelSequences");
 			Cursors = YamlList(yaml, "Cursors");
 			Chrome = YamlList(yaml, "Chrome");
-			Assemblies = YamlList(yaml, "Assemblies");
 			ChromeLayout = YamlList(yaml, "ChromeLayout");
 			Weapons = YamlList(yaml, "Weapons");
 			Voices = YamlList(yaml, "Voices");
@@ -157,6 +157,9 @@ namespace OpenRA
 
 			if (yaml.TryGetValue("DefaultOrderGenerator", out entry))
 				DefaultOrderGenerator = entry.Value;
+
+			if (yaml.TryGetValue("Assemblies", out entry))
+				Assemblies = FieldLoader.GetValue<string[]>("Assemblies", entry.Value);
 
 			if (yaml.TryGetValue("PackageFormats", out entry))
 				PackageFormats = FieldLoader.GetValue<string[]>("PackageFormats", entry.Value);
