@@ -21,6 +21,7 @@ using OpenRA.Mods.Common.Scripting;
 using OpenRA.Mods.Common.Scripting.Global;
 using OpenRA.Mods.Common.Traits;
 using OpenRA.Mods.Common.Warheads;
+using OpenRA.Mods.Common.Widgets.Logic;
 using OpenRA.Scripting;
 using OpenRA.Traits;
 using OpenRA.Widgets;
@@ -246,7 +247,7 @@ namespace OpenRA.Mods.Common.Lint
 			testedFields.AddRange(
 				modData.ObjectCreator.GetTypes()
 				.Where(t => t.IsSubclassOf(typeof(TraitInfo)) || t.IsSubclassOf(typeof(Warhead)))
-				.SelectMany(t => t.GetFields().Where(f => f.HasAttribute<TranslationReferenceAttribute>())));
+				.SelectMany(t => Utility.GetFields(t).Where(Utility.HasAttribute<TranslationReferenceAttribute>)));
 
 			// HACK: Need to hardcode the custom loader for GameSpeeds.
 			var gameSpeeds = modData.Manifest.Get<GameSpeeds>();
@@ -257,13 +258,13 @@ namespace OpenRA.Mods.Common.Lint
 				usedKeys.Add(speed.Name, gameSpeedTranslationReference, $"`{nameof(GameSpeed)}.{nameof(GameSpeed.Name)}`");
 
 			// TODO: linter does not work with LoadUsing
+			var resourceTypeNameField = typeof(ResourceRendererInfo.ResourceTypeInfo).GetField(nameof(ResourceRendererInfo.ResourceTypeInfo.Name));
+			testedFields.Add(resourceTypeNameField);
+			var resourceTypeTranslationReference = Utility.GetCustomAttributes<TranslationReferenceAttribute>(resourceTypeNameField, true)[0];
 			foreach (var actorInfo in modData.DefaultRules.Actors)
 			{
 				foreach (var info in actorInfo.Value.TraitInfos<ResourceRendererInfo>())
 				{
-					var resourceTypeNameField = typeof(ResourceRendererInfo.ResourceTypeInfo).GetField(nameof(ResourceRendererInfo.ResourceTypeInfo.Name));
-					var resourceTypeTranslationReference = Utility.GetCustomAttributes<TranslationReferenceAttribute>(resourceTypeNameField, true)[0];
-					testedFields.Add(resourceTypeNameField);
 					foreach (var resourceTypes in info.ResourceTypes)
 						usedKeys.Add(
 							resourceTypes.Value.Name,
@@ -289,6 +290,64 @@ namespace OpenRA.Mods.Common.Lint
 					var keys = LintExts.GetFieldValues(null, field, translationReference.DictionaryReference);
 					foreach (var key in keys)
 						usedKeys.Add(key, translationReference, $"`{field.ReflectedType.Name}.{field.Name}`");
+				}
+			}
+
+			var hotkeyTranslationFields =
+				Utility.GetFields(typeof(HotkeyDefinition))
+					.Select(f => (Field: f, TranslationReference: Utility.GetCustomAttributes<TranslationReferenceAttribute>(f, true).SingleOrDefault()))
+					.Where(x => x.TranslationReference != null)
+					.ToArray();
+			testedFields.AddRange(hotkeyTranslationFields.Select(x => x.Field));
+			foreach (var hotkeyDefinition in modData.Hotkeys.Definitions)
+			{
+				foreach (var (field, translationReference) in hotkeyTranslationFields)
+				{
+					var keys = LintExts.GetFieldValues(hotkeyDefinition, field, translationReference.DictionaryReference);
+					foreach (var key in keys)
+						usedKeys.Add(key, translationReference, $"`{field.ReflectedType.Name}.{field.Name}`");
+				}
+			}
+
+			var keycodeTranslationFields =
+				new[]
+				{
+					typeof(KeycodeExts).GetField("KeycodeTranslationKeys", BindingFlags.NonPublic | BindingFlags.Static),
+					typeof(ModifiersExts).GetField("Cmd", BindingFlags.NonPublic | BindingFlags.Static),
+					typeof(ModifiersExts).GetField("ModifierTranslationKeys", BindingFlags.NonPublic | BindingFlags.Static)
+				}
+				.Select(f => (Field: f, TranslationReference: Utility.GetCustomAttributes<TranslationReferenceAttribute>(f, true).SingleOrDefault()))
+				.Where(x => x.TranslationReference != null)
+				.ToArray();
+			testedFields.AddRange(keycodeTranslationFields.Select(x => x.Field));
+			foreach (var (field, translationReference) in keycodeTranslationFields)
+			{
+				// All keycodes and modifiers should be marked as used, as they can all be configured for use at hotkeys at runtime.
+				var keys = LintExts.GetFieldValues(null, field, translationReference.DictionaryReference);
+				foreach (var key in keys)
+					usedKeys.Add(key, translationReference, $"`{field.ReflectedType.Name}.{field.Name}`");
+			}
+
+			foreach (var filename in modData.Manifest.ChromeLayout)
+				CheckInner(usedKeys, MiniYaml.FromStream(modData.DefaultFileSystem.Open(filename), filename));
+
+			static void CheckInner(TranslationKeys usedKeys, IEnumerable<MiniYamlNode> nodes)
+			{
+				foreach (var node in nodes)
+				{
+					if (node.Value.Nodes != null)
+						CheckInner(usedKeys, node.Value.Nodes);
+
+					if (node.Key != "Logic" || node?.Value.Value != "HotkeysSettingsLogic")
+						continue;
+
+					var hotkeyGroupsNode = node.Value.NodeWithKeyOrDefault("HotkeyGroups");
+					if (hotkeyGroupsNode == null)
+						continue;
+
+					var hotkeyGroupsKeys = hotkeyGroupsNode?.Value.Nodes.Select(n => n.Key);
+					foreach (var key in hotkeyGroupsKeys)
+						usedKeys.Add(key, new TranslationReferenceAttribute(), $"`{nameof(HotkeysSettingsLogic)}.HotkeyGroups`");
 				}
 			}
 

@@ -126,8 +126,10 @@ ChromeLayout:
 Translations:
 	common|languages/en.ftl
 	common|languages/chrome/en.ftl
+	common|languages/hotkeys/en.ftl
 	common|languages/rules/en.ftl
 	d2k|languages/chrome/en.ftl
+	d2k|languages/hotkeys/en.ftl
 	d2k|languages/rules/en.ftl
 
 AllowUnusedTranslationsInExternalPackages: false
