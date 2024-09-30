@@ -139,7 +139,12 @@ namespace OpenRA.Mods.Common.LoadScreens
 			if (contentInstalled)
 				return true;
 
-			Game.InitializeMod(content.ContentInstallerMod, new Arguments(new[] { "Content.Mod=" + ModData.Manifest.Id }));
+			string translationPath;
+			using (var fs = (FileStream)ModData.DefaultFileSystem.Open(content.Translation))
+				translationPath = fs.Name;
+			Game.InitializeMod(
+				content.ContentInstallerMod,
+				new Arguments(new[] { "Content.Mod=" + ModData.Manifest.Id, "Content.TranslationFile=" + translationPath }));
 			return false;
 		}
 	}

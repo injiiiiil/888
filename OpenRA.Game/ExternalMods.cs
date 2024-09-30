@@ -127,7 +127,7 @@ namespace OpenRA
 			{
 				new MiniYamlNode("Id", mod.Id),
 				new MiniYamlNode("Version", mod.Metadata.Version),
-				new MiniYamlNode("Title", mod.Metadata.Title),
+				new MiniYamlNode("Title", mod.Metadata.TitleTranslated),
 				new MiniYamlNode("LaunchPath", launchPath),
 				new MiniYamlNode("LaunchArgs", new[] { "Game.Mod=" + mod.Id }.Concat(launchArgs).JoinWith(", "))
 			}));

@@ -59,6 +59,8 @@ namespace OpenRA
 			ModFiles.LoadFromManifest(Manifest);
 			Manifest.LoadCustomData(ObjectCreator);
 
+			TranslationProvider.Initialize(this, DefaultFileSystem);
+
 			if (useLoadScreen)
 			{
 				LoadScreen = ObjectCreator.CreateObject<ILoadScreen>(Manifest.LoadScreen.Value);

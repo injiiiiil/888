@@ -1,5 +1,5 @@
 Metadata:
-	Title: Mod Content Manager
+	Title: mod-title
 	Version: {DEV_VERSION}
 	Hidden: true
 
@@ -22,6 +22,9 @@ Assemblies:
 
 ChromeLayout:
 	modcontent|content.yaml
+
+Translations:
+	modcontent|languages/en.ftl
 
 Notifications:
 	modcontent|notifications.yaml

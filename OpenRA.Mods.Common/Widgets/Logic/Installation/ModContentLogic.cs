@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using OpenRA.FileSystem;
 using OpenRA.Widgets;
@@ -30,10 +31,12 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 		readonly Dictionary<string, ModContent.ModSource> sources = new();
 		readonly Dictionary<string, ModContent.ModDownload> downloads = new();
 
+		readonly Translation externalTranslation;
+
 		bool sourceAvailable;
 
 		[ObjectCreator.UseCtor]
-		public ModContentLogic(Widget widget, Manifest mod, ModContent content, Action onCancel)
+		public ModContentLogic(Widget widget, Manifest mod, ModContent content, Action onCancel, string translationFilePath)
 		{
 			this.content = content;
 
@@ -54,20 +57,25 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 
 			modFileSystem.UnmountAll();
 
+			externalTranslation = new Translation(Game.Settings.Player.Language, File.ReadAllText(translationFilePath), _ => { });
+
 			scrollPanel = panel.Get<ScrollPanelWidget>("PACKAGES");
 			template = scrollPanel.Get<ContainerWidget>("PACKAGE_TEMPLATE");
 
 			var headerTemplate = panel.Get<LabelWidget>("HEADER_TEMPLATE");
-			var headerLines = !string.IsNullOrEmpty(content.HeaderMessage) ? content.HeaderMessage.Replace("\\n", "\n").Split('\n') : Array.Empty<string>();
+			var headerLines =
+				!string.IsNullOrEmpty(content.HeaderMessage)
+					? externalTranslation.GetString(content.HeaderMessage)
+					: null;
 			var headerHeight = 0;
-			foreach (var l in headerLines)
+			if (headerLines != null)
 			{
-				var line = (LabelWidget)headerTemplate.Clone();
-				line.GetText = () => l;
-				line.Bounds.Y += headerHeight;
-				panel.AddChild(line);
+				var label = (LabelWidget)headerTemplate.Clone();
+				label.GetText = () => headerLines;
+				label.IncreaseHeightToFitCurrentText();
+				panel.AddChild(label);
 
-				headerHeight += headerTemplate.Bounds.Height;
+				headerHeight += label.Bounds.Height;
 			}
 
 			panel.Bounds.Height += headerHeight;
@@ -81,7 +89,8 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			sourceButton.OnClick = () => Ui.OpenWindow("SOURCE_INSTALL_PANEL", new WidgetArgs
 			{
 				{ "sources", sources },
-				{ "content", content }
+				{ "content", content },
+				{ "externalTranslation", externalTranslation },
 			});
 
 			var backButton = panel.Get<ButtonWidget>("BACK_BUTTON");
@@ -105,7 +114,7 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			{
 				var container = template.Clone();
 				var titleWidget = container.Get<LabelWidget>("TITLE");
-				var title = p.Value.Title;
+				var title = externalTranslation.GetString(p.Value.Title);
 				titleWidget.GetText = () => title;
 
 				var requiredWidget = container.Get<LabelWidget>("REQUIRED");
